@@ -1,0 +1,58 @@
+name: Automerge Content Branch to Production
+on:
+  push:
+    branches:
+      - content
+jobs:
+  PushContentToMasterAndPublish:
+    runs-on: ubuntu-latest
+    #push content to master
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: master
+      - name: Pull content branch
+        run: |
+          git fetch origin content:content
+          git reset --hard content
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        id: cpr
+        with:
+          token: ${{ secrets.PAT }}
+          branch: release/master
+          delete-branch: true
+          title: 'Automerge content to master'
+          labels: |
+            automerge to master
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
+      #push content to publish
+      - uses: actions/checkout@v3
+        with:
+          ref: publish
+      - name: Pull content branch
+        run: |
+          git fetch origin content:content
+          git reset --hard content
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        id: cprd
+        with:
+          token: ${{ secrets.PAT }}
+          branch: sync/publish
+          delete-branch: true
+          title: 'Automerge content to publish'
+          labels: |
+            automerge to publish
+      - name: Enable Pull Request Automerge
+        if: steps.cprd.outputs.pull-request-operation == 'created' || steps.cprd.outputs.pull-request-operation == 'updated'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          pull-request-number: ${{ steps.cprd.outputs.pull-request-number }}
+          merge-method: merge    
+         

@@ -1,0 +1,32 @@
+name: Sync Content Branch with Production
+on:
+  push:
+    branches:
+      - master
+jobs:
+  SyncMasterToContent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: content
+      - name: Pull master branch
+        run: |
+          git fetch origin master:master
+          git reset --hard master
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        id: cpr
+        with:
+          token: ${{ secrets.PAT }}
+          branch: sync/content
+          delete-branch: true
+          title: 'Automerge master to content'
+          labels: |
+            automerge to content
+      - name: Enable Pull Request Automerge
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: merge
